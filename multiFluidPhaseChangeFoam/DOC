@@ -1,0 +1,41 @@
+Sat Nov 24 14:22:45 CST 2018
+-multiFluidPhaseChangeFoam-
+1   Description:
+    Multi-fluid model incorporated with interface capturing. Switching criterion is based on local/maximum gradient of the volume fraction.
+    
+2   Dynamic switching:   
+    -class multiFluidSystem-
+    add private data (volScalarField cAlpha_) -> for output;
+    define private member function {void calcCAlpha()} -> initialize cAlpha;
+    define private member function {tmp<surfaceScalarField> cAlphaGamma} -> calculate surfaceScalarField gamma = local gradient of volume fraction/maximum gradient;
+    define private member function {tmp<surfaceScalarField> cAlphaSwitch} -> calculate volScalarField cAlpha (gamma[i]>0.4 ? cAlpha[i]=1 : cAlpha[i]=0), pass by reference because gamma needs to be modified;
+    {cAlphaGammav}, {cAlphaSwitchv} are similar to the above two functions, but defined as volScalarField type for output purpose;
+    
+3   User specified gammaStar (switching threshold):
+    -class multiFluidSystem-
+    define private data (scalar gammaStar) -> lookup at transportProperties;
+    
+4   User specified interface compression coefficient:
+    -class multiFluidSystem-
+    define private data (scalar interfaceCompressionCoeff) -> lookup at transportProperties;
+    keep cAlphaSwitch as a binary value for further sigma.. switching;
+    multiply compressionCoeff @ solveAlphas();
+    
+5   Dynamic surface tension force:
+    -class multiFluidSystem-
+    insert cAlphaSwitch(gamma) @ stf to ensure that surface tension force only exists where cAlphaSwitch=1;
+
+6   Artificial drag imposed to equalize the velocities at the interface:
+    -class multiFluidSystem-
+    modify max () @ volScalarField* Kptr;
+    add cAlpha_ / dm.residualPhaseFraction();
+    
+7   notes about cAlpha:
+    cAlphas for different phase pairs are calculated during solveAlphas();
+    therefore volScalarField cAlpha_ is only saved/written for the last phase pair (get refreshed every forAllIter(PtrDictionary<phaseModel>, phases_, iter));
+    
+8   for k phases, only (k-1) alpha equations are solved
+    @void Foam::multiFluidSystem::solveAlphas()
+    PtrList<surfaceScalarField> alphaPhiCorrs(phases_.size()-1);
+    if (phasei == (phases_.size()-1)) break;
+    

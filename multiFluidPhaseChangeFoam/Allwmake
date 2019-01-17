@@ -1,0 +1,13 @@
+#!/bin/sh
+
+cd multiFluidSystem
+wclean
+wmake
+cd ../interfacialModels
+wclean
+wmake
+cd ..
+wclean
+wmake
+
+#------------------------------------------------------------------------------

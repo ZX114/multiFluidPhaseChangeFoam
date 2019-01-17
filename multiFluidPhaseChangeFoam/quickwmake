@@ -1,0 +1,10 @@
+#!/bin/sh
+
+cd multiFluidSystem
+wmake
+cd ../interfacialModels
+wmake
+cd ..
+wmake
+
+#------------------------------------------------------------------------------
